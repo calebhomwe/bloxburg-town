@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bloxburg Town — Build Dashboard</title>
+<style>
+  :root { --bg:#14161c; --card:#1e222b; --ink:#e8ecf3; --dim:#9aa4b5; --good:#3ecf6f; --bad:#ff5d5d; --warn:#ffb84d; --accent:#57a6ff; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--ink); font:16px/1.5 "Segoe UI",system-ui,sans-serif; padding:32px 20px 60px; }
+  .wrap { max-width:1000px; margin:0 auto; }
+  h1 { font-size:34px; letter-spacing:.5px; }
+  h1 .town { color:var(--accent); }
+  .sub { color:var(--dim); margin:6px 0 24px; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+  .card { background:var(--card); border-radius:14px; padding:18px 20px; flex:1 1 280px; }
+  .btn { display:inline-block; background:var(--accent); color:#0b1522; font-weight:700; text-decoration:none;
+         padding:12px 26px; border-radius:10px; font-size:18px; }
+  .btn:hover { filter:brightness(1.1); }
+  table { width:100%; border-collapse:collapse; margin-top:8px; }
+  td, th { text-align:left; padding:7px 10px; border-bottom:1px solid #2b313d; font-size:14px; }
+  th { color:var(--dim); font-weight:600; }
+  .pass { color:var(--good); font-weight:700; }
+  .fail { color:var(--bad); font-weight:700; }
+  .skip { color:var(--warn); font-weight:700; }
+  .meta { color:var(--dim); font-size:14px; }
+  .shots { display:flex; gap:10px; flex-wrap:wrap; }
+  .shots img { width:236px; border-radius:8px; border:1px solid #2b313d; }
+  ul { margin-left:20px; font-size:14px; color:var(--ink); }
+  li { margin:4px 0; }
+  .foot { margin-top:28px; color:var(--dim); font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>BLOXBURG <span class="town">TOWN</span></h1>
+  <div class="sub">A Bloxburg-style life sim - build, earn, decorate. Built with Unity 6, tested by a 6-layer harness.</div>
+
+  <div class="row">
+    <div class="card" style="flex:2 1 340px">
+      <a class="btn" href="index.html">&#9654; PLAY THE GAME</a>
+      <p class="meta" style="margin-top:10px">
+        Build <b id="build-id">...</b> &middot; shipped <b id="build-date">...</b><br>
+        WASD move &middot; E interact &middot; B build mode &middot; 1-9 pick piece &middot; R rotate &middot; P photo mode
+      </p>
+    </div>
+    <div class="card">
+      <b>Gameplay (bot player)</b><br>
+      <img id="bot-gif" src="bot-gameplay.gif" alt="bot gameplay" style="width:100%;max-width:300px;border-radius:8px;margin-top:8px"
+           onerror="this.style.display='none'">
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card" style="flex:2 1 460px">
+      <b>Automated test harness — latest full run</b>
+      <table id="layers">
+        <tr><th>Layer</th><th>Result</th><th>Note</th></tr>
+        <tr><td colspan="3" class="meta">pending first full run...</td></tr>
+      </table>
+      <p class="meta" id="summary-note"></p>
+    </div>
+    <div class="card">
+      <b>Economy balance (sim)</b><br>
+      <img src="balance-chart.png" alt="balance chart" style="width:100%;border-radius:8px;margin-top:8px"
+           onerror="this.style.display='none'">
+      <p class="meta">Monte Carlo n=1000, from real exported game constants.</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card" style="flex:1 1 100%">
+      <b>Screenshots (bot player run)</b>
+      <div class="shots" id="shots" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card" style="flex:1 1 100%">
+      <b>Changelog</b>
+      <ul id="log">
+        <li><b>v0.2</b> — test harness (6 layers), bot player, balance sim, WebGL boot fix for static hosts.</li>
+        <li><b>v0.1</b> — town, player, plot claiming, build mode, furniture, jobs, NPCs, day/night, saves.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="foot">DASHBOARD.HTML — evidence pages live next to the game; <a href="index.html" style="color:var(--accent)">index.html is the game itself</a>.</div>
+</div>
+<script>
+  // Screenshot gallery: bot_01..bot_09, hide missing gracefully.
+  const shots = document.getElementById('shots');
+  for (let i = 1; i <= 9; i++) {
+    const n = String(i).padStart(2, '0');
+    const img = new Image();
+    img.src = 'shots/bot_' + n + '_spawn.png'; // replaced per-file below
+  }
+  const names = ['bot_01_spawn','bot_02_plot_claimed','bot_03_house_built','bot_04_furnished',
+                 'bot_05_rewards','bot_06_job_paid','bot_07_reloaded'];
+  names.forEach(n => {
+    const img = new Image();
+    img.src = 'shots/' + n + '.png';
+    img.onload = () => { const el = new Image(); el.src = img.src; el.alt = n; shots.appendChild(el); };
+  });
+</script>
+</body>
+</html>
