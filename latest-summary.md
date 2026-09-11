@@ -38,3 +38,15 @@
 
 | L0 build webgl | PASS | out=C:\Games\Unity\Bloxburg\TestResults\builds\webgl-20260911_195433 exists=True |
 
+| L0 build win64 | PASS | out=C:\Games\Unity\Bloxburg\TestResults\builds\win64-20260911_204653 exists=True |
+
+| L tests EditMode | PASS | total=107 passed=107 failed=0 skipped=0 |
+| L tests PlayMode | FAIL | total=5 passed=3 failed=2 skipped=0 |
+
+| L tests EditMode | PASS | total=107 passed=107 failed=0 skipped=0 |
+| L tests PlayMode | PASS | total=5 passed=5 failed=0 skipped=0 |
+
+| L3 bot player | PASS | passed=1; gif=ok; brightness=162.8/255 |
+
+| L0 build webgl | PASS | out=C:\Games\Unity\Bloxburg\TestResults\builds\webgl-20260911_222125 exists=True |
+
