@@ -2,10 +2,46 @@
 <html lang="en-us">
   <head>
     <meta charset="utf-8">
+    <script src="https://calebhomwe.github.io/arcade/assets/arcade-sdk.js"></script>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity Web Player | Bloxburg Town</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bloxburg Town</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
+    <style>
+      /* Title card (doubles as the loading screen), first-run coach, codes label.
+         Everything here sits over the Unity canvas; the game itself is unchanged. */
+      body { background: #231F20; font-family: "Segoe UI", Arial, sans-serif; }
+      .bt-card { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px;
+        background: radial-gradient(120% 90% at 50% 0%, rgba(74, 144, 217, .55), rgba(20, 18, 19, .94)); }
+      .bt-card[hidden] { display: none; }
+      .bt-panel { width: min(430px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: #fffdf7; color: #231F20;
+        border-radius: 22px; padding: 22px 20px 16px; text-align: center; box-shadow: 0 24px 70px rgba(0, 0, 0, .5); }
+      .bt-panel h1 { margin: 0 0 4px; font-size: 32px; font-weight: 900; }
+      .bt-panel p { margin: 6px 0 12px; color: #5a5560; font-size: 15px; line-height: 1.45; }
+      .bt-panel button { display: block; width: 100%; min-height: 46px; margin: 8px 0; border: 0; border-radius: 14px; cursor: pointer;
+        font: 800 16px "Segoe UI", Arial, sans-serif; background: #eef0f8; color: #231F20; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .12); }
+      .bt-panel button.go { background: linear-gradient(#5ee07c, #23b04b); color: #fff; }
+      .bt-panel button:disabled { opacity: .55; cursor: wait; }
+      .bt-panel button:focus-visible { outline: 3px solid #4a90d9; outline-offset: 2px; }
+      .bt-bar { height: 12px; background: #e3e1ea; border-radius: 8px; overflow: hidden; margin: 10px 0 4px; }
+      .bt-bar i { display: block; height: 100%; width: 0; background: #23b04b; }
+      .bt-seg { display: flex; gap: 8px; }
+      .bt-seg button { flex: 1; margin: 4px 0; }
+      .bt-seg button[aria-pressed="true"] { background: #4a90d9; color: #fff; }
+      .bt-small { font-size: 13px !important; }
+      #bt-coach { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 25; width: min(470px, calc(100vw - 20px));
+        background: #fffdf7; color: #231F20; border-radius: 16px; padding: 12px 14px; display: flex; gap: 10px; align-items: center;
+        box-shadow: 0 12px 34px rgba(0, 0, 0, .45); }
+      #bt-coach[hidden] { display: none; }
+      #bt-coach .t { flex: 1; font-size: 15px; line-height: 1.4; }
+      #bt-coach .s { display: block; font-size: 12px; color: #6a6f86; }
+      #bt-coach button { min-height: 40px; min-width: 56px; border: 0; border-radius: 12px; font: 800 14px "Segoe UI", sans-serif; cursor: pointer; background: #eef0f8; }
+      #bt-coach button.go { background: #23b04b; color: #fff; }
+      #bt-codes { position: fixed; left: 10px; top: 10px; z-index: 26; background: #ffd257; color: #231F20; border-radius: 99px; padding: 5px 10px;
+        font: 900 12px "Segoe UI", sans-serif; letter-spacing: .1em; text-transform: uppercase; pointer-events: none; }
+      @media (prefers-reduced-motion: reduce) { .bt-bar i { transition: none; } }
+    </style>
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
@@ -23,15 +59,35 @@
         <div id="unity-build-title">Bloxburg Town</div>
       </div>
     </div>
+
+    <div class="bt-card" id="bt-title" role="dialog" aria-modal="true" aria-labelledby="bt-h">
+      <div class="bt-panel">
+        <div style="font-size:44px" aria-hidden="true">🏡🚗🐶</div>
+        <h1 id="bt-h">Bloxburg Town</h1>
+        <p>Claim a plot, build and furnish your house, work jobs, adopt a pet and buy a car, in a town whose neighbours keep their own schedules.</p>
+        <div class="bt-bar" aria-hidden="true"><i id="bt-bar"></i></div>
+        <p class="bt-small" id="bt-load" aria-live="polite">Loading the town…</p>
+        <button class="go" id="bt-play" disabled>Play</button>
+        <div class="bt-seg" role="group" aria-label="Graphics quality">
+          <button id="bt-q-high" aria-pressed="true">Graphics: High</button>
+          <button id="bt-q-low" aria-pressed="false">Graphics: Low</button>
+        </div>
+        <p class="bt-small">WASD moves, the mouse looks, E interacts. Your town is saved in this browser.</p>
+      </div>
+    </div>
+    <div id="bt-coach" hidden role="status" aria-live="polite">
+      <div class="t"><span class="s" id="bt-step"></span><span id="bt-text"></span></div>
+      <button class="go" id="bt-next">Next</button>
+      <button id="bt-skip">Skip</button>
+    </div>
+    <div id="bt-codes" hidden>Codes on</div>
+
     <script>
       var canvas = document.querySelector("#unity-canvas");
 
       // Shows a temporary message banner/ribbon for a few seconds, or
       // a permanent error message on top of the canvas if type=='error'.
       // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
       function unityShowBanner(msg, type) {
         var warningBanner = document.querySelector("#unity-warning");
         function updateBannerVisibility() {
@@ -63,71 +119,138 @@
         productName: "Bloxburg Town",
         productVersion: "0.1",
         showBanner: unityShowBanner,
-        // errorHandler: function(err, url, line) {
-        //    alert("error " + err + " occurred at line " + line);
-        //    // Return 'true' if you handled this error and don't want Unity
-        //    // to process it further, 'false' otherwise.
-        //    return true;
-        // },
       };
+      // Keep Application.persistentDataPath (the town's save.json) in IndexedDB, so a save survives a reload.
+      config.autoSyncPersistentDataPath = true;
 
-      // By default, Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
-
-      // If you would like all file writes inside Unity Application.persistentDataPath
-      // directory to automatically persist so that the contents are remembered when
-      // the user revisits the site the next time, uncomment the following line:
-      // config.autoSyncPersistentDataPath = true;
-      // This autosyncing is currently not the default behavior to avoid regressing
-      // existing user projects that might rely on the earlier manual
-      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
-      // expected to change.
+      /* Graphics quality: Low renders at 1x instead of the screen's pixel ratio. Remembered in this browser. */
+      var quality = 'high';
+      try { quality = localStorage.getItem('bloxburg_quality') === 'low' ? 'low' : 'high'; } catch (e) {}
+      function applyQuality() {
+        config.devicePixelRatio = quality === 'low' ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+        document.getElementById('bt-q-high').setAttribute('aria-pressed', String(quality === 'high'));
+        document.getElementById('bt-q-low').setAttribute('aria-pressed', String(quality === 'low'));
+      }
+      applyQuality();
 
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         // Mobile device style: fill the whole browser client area with the game canvas:
-
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
         document.querySelector("#unity-container").className = "unity-mobile";
         canvas.className = "unity-mobile";
-
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
-
-
       } else {
         // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
         canvas.style.width = "960px";
         canvas.style.height = "600px";
       }
 
-      document.querySelector("#unity-loading-bar").style.display = "block";
+      /* ── Caleb's Arcade hookup (guarded: the page works without the SDK) ── */
+      var SDK = window.ArcadeSDK || null;
+      function sdkState(scene) { try { SDK && SDK.state({ scene: scene }); } catch (e) {} }
+      var unity = null, booting = false, wantPlay = false;
+      var titleEl = document.getElementById('bt-title'), playBtn = document.getElementById('bt-play');
+
+      function boot() {
+        if (booting || unity) return;
+        booting = true;
+        playBtn.disabled = true; playBtn.textContent = 'Play';
+        document.getElementById('bt-load').textContent = 'Loading the town…';
+        createUnityInstance(canvas, config, function (progress) {
+          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+          document.getElementById('bt-bar').style.width = Math.round(100 * progress) + '%';
+        }).then(function (unityInstance) {
+          unity = unityInstance; booting = false;
+          window.unityInstance = unityInstance;
+          document.querySelector("#unity-loading-bar").style.display = "none";
+          document.querySelector("#unity-fullscreen-button").onclick = function () { unityInstance.SetFullscreen(1); };
+          document.getElementById('bt-load').textContent = 'Ready.';
+          playBtn.disabled = false;
+          if (wantPlay) enterTown();
+        }).catch(function (message) {
+          booting = false;
+          document.getElementById('bt-load').textContent = 'The town could not load: ' + message;
+        });
+      }
+      /* Restart and Exit quit the running town (Unity saves on quit) and boot it again in this page. */
+      function reboot(thenPlay) {
+        wantPlay = !!thenPlay;
+        coachEnd(false);
+        var old = unity; unity = null;
+        titleEl.hidden = false;              // the title card shows the loading bar while the town boots
+        if (!thenPlay) sdkState('title');
+        document.getElementById('bt-bar').style.width = '0%';
+        if (old) old.Quit().then(boot, boot); else boot();
+      }
+      function enterTown() {
+        wantPlay = false;
+        titleEl.hidden = true;
+        try { canvas.focus(); } catch (e) {}
+        sdkState('play');
+        var seen = false; try { seen = localStorage.getItem('bloxburg_tut') === '1'; } catch (e) {}
+        if (!seen) coachShow(0);
+      }
+      playBtn.onclick = function () { if (unity) enterTown(); };
+      function setQuality(q) {
+        if (q === quality) return;
+        quality = q; try { localStorage.setItem('bloxburg_quality', q); } catch (e) {}
+        applyQuality();
+        if (unity || booting) reboot(false);   // the pixel ratio is fixed when the town boots
+      }
+      document.getElementById('bt-q-high').onclick = function () { setQuality('high'); };
+      document.getElementById('bt-q-low').onclick = function () { setQuality('low'); };
+
+      /* First-run coach: the town's own opening steps, one card at a time, skippable. */
+      var COACH = [
+        'Move with <b>WASD</b>, look with the mouse, hold <b>Shift</b> to run.',
+        'Find a brown plot and press <b>E</b> to claim it as your own.',
+        '<b>B</b> builds walls and floors, <b>F</b> places furniture, <b>C</b> paints.',
+        'Work at the blue shop (<b>E</b>) to earn cash for your house.',
+        'Check the mailbox every day for a gift, and look out for the daily gem.'
+      ];
+      var coachIx = -1;
+      function coachShow(i) {
+        if (i >= COACH.length) { coachEnd(true); return; }
+        coachIx = i;
+        document.getElementById('bt-step').textContent = 'Tutorial ' + (i + 1) + ' of ' + COACH.length;
+        document.getElementById('bt-text').innerHTML = COACH[i];
+        document.getElementById('bt-next').textContent = i === COACH.length - 1 ? 'Done' : 'Next';
+        document.getElementById('bt-coach').hidden = false;
+      }
+      function coachEnd(done) {
+        coachIx = -1; document.getElementById('bt-coach').hidden = true;
+        if (done) { try { localStorage.setItem('bloxburg_tut', '1'); } catch (e) {} }
+        try { canvas.focus(); } catch (e) {}
+      }
+      document.getElementById('bt-next').onclick = function () { coachShow(coachIx + 1); };
+      document.getElementById('bt-skip').onclick = function () { coachEnd(true); };
+
+      /* Codes: they refill the Sim's needs through the town's own Needs system. */
+      var CODES = {
+        FULLTUMMY: { effect: 'Hunger filled right up', call: ['NeedsSystem', 'Eat', 100] },
+        WIDEAWAKE: { effect: 'Energy filled right up', call: ['NeedsSystem', 'Sleep'] },
+        PARTYTIME: { effect: 'Fun filled right up', call: ['NeedsSystem', 'AddFun', 100] }
+      };
+      function applyCode(code) {
+        code = String(code || '').trim().toUpperCase();
+        var c = CODES[code];
+        if (!c || !unity) return { ok: false };
+        try { unity.SendMessage.apply(unity, c.call); } catch (e) { return { ok: false }; }
+        document.getElementById('bt-codes').hidden = false;
+        return { ok: true, message: c.effect };
+      }
+
+      if (SDK) { try { window.ArcadeSDK.init({
+        pauseKeys: '', pauseButton: 'tr',        // the town already uses P and Esc
+        onRestart: function () { reboot(true); },
+        onExit: function () { reboot(false); },
+        onTutorial: function () { titleEl.hidden = true; coachShow(0); },
+        onCheat: applyCode
+      }); } catch (e) {} }
+      sdkState('title');
 
       var script = document.createElement("script");
       script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                document.querySelector("#unity-loading-bar").style.display = "none";
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
-
-              }).catch((message) => {
-                alert(message);
-              });
-            };
-
+      script.onload = boot;
       document.body.appendChild(script);
-
     </script>
   </body>
 </html>
