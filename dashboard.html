@@ -88,13 +88,8 @@
   <div class="foot">DASHBOARD.HTML — evidence pages live next to the game; <a href="index.html" style="color:var(--accent)">index.html is the game itself</a>.</div>
 </div>
 <script>
-  // Screenshot gallery: bot_01..bot_09, hide missing gracefully.
+  // Screenshot gallery: only shots that load are shown.
   const shots = document.getElementById('shots');
-  for (let i = 1; i <= 9; i++) {
-    const n = String(i).padStart(2, '0');
-    const img = new Image();
-    img.src = 'shots/bot_' + n + '_spawn.png'; // replaced per-file below
-  }
   const names = ['bot_01_spawn','bot_02_plot_claimed','bot_03_house_built','bot_04_furnished',
                  'bot_05_rewards','bot_06_job_paid','bot_07_reloaded'];
   names.forEach(n => {
